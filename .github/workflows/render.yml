@@ -14,9 +14,9 @@ jobs:
       - uses: r-lib/actions/setup-pandoc@v2
 
       - name: Install R packages
-        run: |
-          install.packages("pak")
-          pak::pak(c("rmarkdown", "tidyverse", "rerddap", "giscoR", "patchwork", "ggsci"))
+         run: |
+          options(repos = c(CRAN = "https://cloud.r-project.org"))
+          install.packages(c("rmarkdown", "tidyverse", "rerddap", "giscoR", "patchwork", "ggsci"))
         shell: Rscript {0}
 
       - name: Render R Markdown

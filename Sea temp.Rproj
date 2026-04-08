@@ -1,0 +1,18 @@
+Version: 1.0
+ProjectId: ed3656c4-566d-4a0a-ad20-3c5892be5be4
+
+RestoreWorkspace: Default
+SaveWorkspace: Default
+AlwaysSaveHistory: Default
+
+EnableCodeIndexing: Yes
+UseSpacesForTab: Yes
+NumSpacesForTab: 2
+Encoding: UTF-8
+
+RnwWeave: Sweave
+LaTeX: XeLaTeX
+
+PythonType: system
+PythonVersion: 3.9.6
+PythonPath: /usr/bin/python3

@@ -1,0 +1,407 @@
+---
+title: "Port Phillip Bay seawater temps"
+output:
+  html_document: 
+       theme: cosmo
+  pdf_document: default
+editor_options:
+  markdown:
+    wrap: 72
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+```{r include=FALSE}
+library(tidyverse)
+library(ggsci)
+library(rerddap)
+library(giscoR)
+library(patchwork)
+```
+
+
+The temperature records are satellite sea surface temperatures. They are provided in several places, and what's here comes from
+[NOAA](https://https://coastwatch.pfeg.noaa.gov/erddap/griddap/nesdisGeoPolarSSTN5NRT.html), presented as °C in the dataset *NOAA_DHW*. They come from grids 0.05° x 0.05°, corresponding to 5km x 5km. They can be viewed interactively, but it's not easy to look at multi-year time series or site comparisons.
+
+The closest grid cell to Williamstown beach is centred on Lon. 144.875, Lat. -37.875. Two other snorkelling/diving spots are included; the SE corner of the bay (Blairgowrie, Rye, etc.) is 144.775, -38.375, and just outside Western Port (near Flinders pier) is 145.025, -38.475.
+
+```{r params, include=FALSE}
+#Set basic parameters for data download
+sstInfo <- info('NOAA_DHW', url = "https://coastwatch.pfeg.noaa.gov/erddap/")
+#Retrieves basic structure of NOAA dataset
+#Downloading using erddap protocol
+latx = c(-37.8, -38.525)    #Set bounding box for download
+lonx = c(144.35, 145.3)
+
+```
+
+```{r include=FALSE, eval=FALSE}
+#Use this chunk to make new clean copy of stored dataframe "bay"
+#Normally just update saved file each time
+timex = c("2003-01-01", "last")     #Start download from 2013
+bay <- griddap(sstInfo, latitude = latx, longitude = lonx, time = timex, fmt= "csv", fields = 'CRW_SST')
+save(bay, file="bay.Rdata")  #Saved version from last run
+```
+
+```{r getstart, include=FALSE}
+load("bay.Rdata")     #Load saved file
+start <- as.Date(max(bay$time))+1   #Get next day after data in saved file
+```
+
+```{r getdata, include=FALSE}
+timex = c(as.character(start), "last")   #Used to download only new data, rather than large data set each time
+baynew <- griddap(sstInfo, latitude = latx, longitude = lonx, time = timex, fmt= "csv", fields = 'CRW_SST')
+bay <- rbind(bay, baynew)    #Append to saved file
+bay <- unique(bay)
+save(bay, file="bay.Rdata")  #Save new version
+```
+
+
+```{r tidy, include=FALSE }
+bay$sst <- bay$crw_sst
+bay$date <- ymd_hms(bay$time)
+with_tz(bay$date, tzone="Australia/Melbourne")    #Convert to UTC+10
+bay$year <- year(bay$date)   #Create year variable to allow grouping by year on plot
+bay$year_chr <- as.character(bay$year)    #Produces better multi-year plot
+bay$day <- yday(bay$date)   #Get day of year for each date
+bay$day_plot <- as.Date("2019-12-31") + yday(bay$date)    #Creates variable amenable to m/d plots
+bay$summer <- bay$year + (month(bay$date)>=7)      #Creates grouping by summer
+bay$myLabel = case_when(day(bay$day_plot) == 1L ~ format(bay$day_plot, "%b-%d"),
+                    TRUE ~ NA_character_)   #Adds label for 1st of month
+latest_time <- max(bay$date)
+latest<-date(latest_time)
+```
+
+
+```{r boundaries, include=FALSE}
+#For convenience, set 3 desired locations as variables:
+wlon <- 144.875
+wlat <- -37.875
+blon <- 144.775
+blat <- -38.375
+flon <- 145.025
+flat <- -38.475
+
+#Define year to be plotted and temperature ranges for y axis
+# For Port Phillip Bay, force plots to useful temperature range (uses all of y-axis). 
+# For viewing data from a single specific year, set value of pyear, rather than using formula below.
+nyear <- max(bay$year)    #Current year in downloaded data
+pyear <- nyear-1    #Set penultimate year
+syear <- 2014  #Starting year for plots
+tmax <- ceiling(max(bay$sst, na.rm = TRUE))
+tmin <- floor(min(bay$sst, na.rm = TRUE))
+wlatest <- subset(bay, time == max(bay$time) & longitude == wlon & latitude == wlat )
+wtemp <- paste(format(latest,'%A, %B %d, %Y'), round(wlatest$sst, digits = 1), sep = ": ")
+
+```
+
+## Williamstown time series
+
+#### Current year, with last year for an immediate comparison
+
+```{r jawbonerecent, include=FALSE}
+p1 <- ggplot(data = subset(bay, year >= pyear & longitude == wlon & latitude == wlat), aes(x=day_plot, y=sst, group=year_chr, colour=year_chr))+
+  geom_line() +
+  geom_point(data = subset(bay, year > pyear & longitude == wlon & latitude == wlat & time == max(time)), aes(x=day_plot, y=sst)) +
+  scale_y_continuous(breaks=seq(tmin,tmax,1), limits = c(tmin,tmax)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  labs(y = "C", x = NULL, title = "Sea surface temperature, Williamstown", caption = wtemp) +
+  theme_minimal() + 
+  scale_color_aaas(labels=c("Last year", "This year")) +
+  theme(legend.title=element_blank())
+```
+
+```{r jawbonesummer, include=FALSE}
+df <- subset(bay, summer >= pyear & longitude == wlon & latitude == wlat)
+df <- df %>% 
+  group_by(summer) %>% 
+  mutate(order = row_number()) %>% 
+  ungroup()
+x_break <- df$order[!is.na(df$myLabel)][1:12]
+x_label <- df$myLabel[x_break]
+#x_label
+p1a <- ggplot(data = df, aes(x=order, y=sst, group=as.factor(summer), colour=as.factor(summer)))+
+  geom_line() +
+  geom_point(data = subset(df, summer > pyear & time == max(time)), aes(x=order, y=sst)) +
+  scale_y_continuous(breaks=seq(tmin,tmax,1), limits = c(tmin,tmax)) +
+  scale_x_continuous(
+    breaks = x_break,
+    labels = x_label) +
+  labs(y = "C", x = NULL, title = "Sea surface temperature, Williamstown", caption = wtemp) +
+  theme_minimal() + 
+  scale_color_aaas(labels=c("Last summer","This summer")) +
+  theme(axis.text.x = element_text(angle = 90),legend.title=element_blank())
+```
+
+```{r}
+# Choose plot to do based on time of year; use Jan-Dec from April to Aug, Jul-June at other times of year
+if(month(latest_time)>3 & month(latest_time)<9) {
+  p1
+} else {
+  p1a
+}
+```
+
+#### Multi-year plots
+
+The first figure shows the current year, other years from 2014 onwards in the background, and the second includes the past 22 years. The third figure shows the current year against 10- and 20-year averages.
+
+```{r multipanel, include=FALSE}
+#Data goes from 2002 to present. Having 23 years' data is a bit spaghetti-like. Two options are to plot fewer years and/or emphasise the current year more. Do the first option by specifying a value for syear.
+#Do multi-year plot, then overlay data for chosen year (pyear) with heavier line.
+jawbone_all <- subset(bay, longitude == wlon & latitude == wlat)
+p2<- ggplot(data = subset(jawbone_all, year >= syear), aes(x=day_plot, y=sst))+
+  geom_line(linewidth=0.25) +
+  scale_y_continuous(breaks=seq(tmin,tmax,2)) +
+  scale_x_date(date_breaks = "2 month", date_labels = "%b") +
+  labs(y = "C", x = NULL, title = "Daily surface temperature each year") +
+  theme_classic()+
+  theme(legend.title=element_blank(),
+        legend.text = element_text(size = 5),
+        theme(legend.spacing.y = unit(.25, 'cm'))
+        ) +
+  guides(fill = guide_legend(byrow = TRUE)) +
+  facet_wrap(vars(year))
+
+p2c<- ggplot(jawbone_all, aes(x=day_plot, y=sst))+
+  geom_line(linewidth=0.25) +
+  scale_y_continuous(breaks=seq(tmin,tmax,2)) +
+  scale_x_date(date_breaks = "2 month", date_labels = "%b") +
+  labs(y = "C", x = NULL, title = "Daily surface temperature each year") +
+  theme_classic()+
+  theme(legend.title=element_blank(),
+        legend.text = element_text(size = 5),
+        theme(legend.spacing.y = unit(.25, 'cm'))
+        ) +
+  guides(fill = guide_legend(byrow = TRUE)) +
+  facet_wrap(vars(year), ncol=4)
+```
+
+
+```{r greymulti, include=FALSE}
+jawbone_all <- jawbone_all %>% 
+  group_by(summer) %>% 
+  mutate(order = row_number()) %>% 
+  ungroup()
+#x_break <- df$order[!is.na(df$myLabel)][1:12]
+#x_label <- df$myLabel[x_break]
+#x_label
+jawbone_2014 <- subset(jawbone_all, year > syear)
+jawbone_2014 <- jawbone_2014 %>% 
+  group_by(summer) %>% 
+  mutate(order = row_number()) %>% 
+  ungroup()
+
+#Do multi-year plot, then overlay data for chosen year (pyear) with heavier black line.
+df <- jawbone_2014
+p2a<-ggplot(df, aes(x=day_plot, y=sst, group=year_chr))+
+  geom_line( colour="grey60", linewidth=0.25) +
+  geom_line(data = subset(df, year > pyear), aes(x=day_plot, y=sst), color="blue", linewidth=1) +
+  scale_y_continuous(breaks=seq(tmin,tmax,1)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  labs(y = "C", x = NULL, title = "Daily surface temperature, since 2014") +
+  theme_minimal() + 
+  theme(legend.title=element_blank())
+
+df <- jawbone_all
+p2b<-ggplot(df, aes(x=day_plot, y=sst, group=year_chr))+
+  geom_line( colour="grey60", linewidth=0.25) +
+  geom_line(data = subset(df, year > pyear), aes(x=day_plot, y=sst), color="blue", linewidth=1) +
+  scale_y_continuous(breaks=seq(tmin,tmax,1)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  labs(y = "C", x = NULL, title = "Daily surface temperature, since 2002") +
+  theme_minimal() + 
+  theme(legend.title=element_blank())
+
+df <- subset(jawbone_all, year > syear)
+p2e <- ggplot(df, aes(x=order, y=sst, group=summer))+
+  geom_line( colour="grey60", linewidth=0.25) +
+  geom_line(data = subset(df, summer > pyear), aes(x=order, y=sst), color="blue", linewidth=1) +
+  scale_y_continuous(breaks=seq(tmin,tmax,1)) +
+  scale_x_continuous(
+    breaks = x_break,
+    labels = x_label) +
+  labs(y = "C", x = NULL, title = "Daily surface temperature, since 2014") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 90),legend.title=element_blank())
+
+df<- subset(jawbone_all, year > min(jawbone_all$year))
+p2f <- ggplot(data = df, aes(x=order, y=sst, group=summer))+
+  geom_line( colour="grey60", linewidth=0.25) +
+  geom_line(data = subset(df, summer > pyear), aes(x=order, y=sst), color="blue", linewidth=1) +
+  scale_y_continuous(breaks=seq(tmin,tmax,1)) +
+  scale_x_continuous(
+    breaks = x_break,
+    labels = x_label) +
+  labs(y = "C", x = NULL, title = "Daily surface temperature, since 2003") +
+  theme_minimal() + 
+  theme(axis.text.x = element_text(angle = 90),legend.title=element_blank())
+```
+
+```{r}
+# Choose plot to do based on time of year; use Jan-Dec from April to Aug, Jul-June at other times of year
+if(month(latest_time)>3 & month(latest_time)<9) {
+  p2a
+} else {
+  p2e
+}
+if(month(latest_time)>3 & month(latest_time)<9) {
+  p2b
+} else {
+  p2f
+}
+
+#p2c
+```
+
+
+```{r vsmean}
+#Plot instead using averages for whole period or from syear onwards
+l10y<-subset(bay, year >= syear & longitude == wlon & latitude == wlat & year<=pyear)
+l10y <- l10y %>%
+    group_by(day_plot) %>%
+    mutate(Mean10 = mean(sst)) %>%
+    ungroup
+l20y<-subset(bay, longitude == wlon & latitude == wlat & year<=pyear)
+l20y <- l20y %>%
+    group_by(day_plot) %>%
+    mutate(Mean20 = mean(sst)) %>%
+    ungroup
+p2d<-ggplot(data = jawbone_all, aes(x=day_plot, y=sst, group=year_chr))+
+#  geom_line( colour="grey60", linewidth=0.25) +
+  geom_line(data = subset(jawbone_all, year > pyear), aes(x=day_plot, y=sst), color="blue", linewidth=1) +
+  geom_line(data=l10y, aes(x=day_plot, y=Mean10), color="red", linewidth=0.5)+
+  geom_line(data=l20y, aes(x=day_plot, y=Mean20), color= "orange", linewidth=0.5)+
+  scale_y_continuous(breaks=seq(tmin,tmax,1)) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  labs(y = "C", x = NULL, title = "Daily surface temperature",
+       subtitle="Averages since 2014 (red) and since 2002 (orange)") +
+  theme_minimal() + 
+  theme(legend.title=element_blank())
+#p2a 
+#p2b
+p2d
+
+```
+
+## Three places of interest to divers and snorkellers
+
+Open coast sites, such as Flinders, don't get as warm or as cold as those near the top of Port Phillip Bay (Williamstown). Places near the entrance of the bay (Blairgowrie) are intermediate, but closer to open ocean.
+
+```{r threesite}
+# Use 3 initial data sets, jb, bl, fl, convert them to CSV dataframes,then join them end to end. Add a variable for sites
+# First file is Jawbone
+jb <- subset(bay, longitude == wlon & latitude == wlat & year == pyear) 
+jb$site <- "Willy"
+
+# Now blair 
+bl <- subset(bay, longitude == blon & latitude == blat & year == pyear)
+bl$site <- "Blair"
+
+# Now Flinders
+fl <- subset(bay, longitude == flon & latitude == flat & year == pyear) 
+fl$site <- "Flinders" 
+
+# Merge sites 
+bay3 <-do.call("rbind", list(jb, bl, fl)) 
+```
+
+
+```{r 3siteplotpen, include=FALSE}
+# Now do multi-site plot
+p2023 <- ggplot(data = bay3, aes(x=day_plot, y=sst, group = site, colour = site)) + 
+  geom_line() + 
+  scale_y_continuous(breaks=seq(tmin,tmax,1), limits = c(tmin,tmax)) + 
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  scale_colour_uchicago() +
+  theme_minimal() + 
+  labs (title = "Daily surface temperature, last year",
+        subtitle=pyear, y = "C", x = NULL) + 
+  theme(legend.position = c(.7,.9), legend.title = element_blank())
+p2023
+```
+
+
+```{r 3siteplotcurr, include=FALSE}
+# Do three place time series current year
+# To do a different year, redefine the variable nyear earlier in code to set desired year
+jb <- subset(bay, longitude == wlon & latitude == wlat & year == nyear) 
+jb$site <- "Willy"
+bl <- subset(bay, longitude == blon & latitude == blat & year == nyear)
+bl$site <- "Blair"
+fl <- subset(bay, longitude == flon & latitude == flat & year == nyear) 
+fl$site <- "Flinders" 
+bay3 <-do.call("rbind", list(jb, bl, fl)) 
+pnewyear <- ggplot(data = bay3, aes(x=day_plot, y=sst, group = site, colour = site)) + 
+  geom_line() + 
+#  geom_point(data = subset(bay3, time == max(time)), aes(x=day_plot, y=sst, group = site, colour = site)) +
+  scale_y_continuous(breaks=seq(tmin,tmax,1), limits = c(tmin,tmax)) + 
+  scale_x_date(date_breaks = "2 month", date_labels = "%b", limits = as_date(c("2020-01-01","2020-12-31"))) +
+  scale_colour_uchicago() +
+  theme_minimal() + 
+  labs (subtitle=nyear, y = "C", x = NULL) + 
+  theme(legend.position = c(.7,.9), legend.title = element_blank())
+pnewyear
+
+```
+
+```{r 3sitecurrvspastdec}
+jb <- subset(bay, longitude == wlon & latitude == wlat & year >= syear & year <=pyear) 
+jb$site <- "Willy"
+bl <- subset(bay, longitude == blon & latitude == blat & year >= syear & year <=pyear)
+bl$site <- "Blair"
+fl <- subset(bay, longitude == flon & latitude == flat & year >= syear & year <=pyear) 
+fl$site <- "Flinders" 
+bay3 <-do.call("rbind", list(jb, bl, fl)) 
+
+#l10y<-subset(bay, year >= syear & year<=pyear)
+bay3 <- bay3 %>%
+    group_by(day_plot, site) %>%
+    mutate(Mean10 = mean(sst)) %>%
+    ungroup
+
+pdec <- ggplot(data = bay3, aes(x=day_plot, y=Mean10, group = site, colour = site)) + 
+  geom_line() + 
+  scale_y_continuous(breaks=seq(tmin,tmax,1), limits = c(tmin,tmax)) + 
+  scale_x_date(date_breaks = "2 month", date_labels = "%b") +
+  scale_colour_uchicago() +
+  theme_minimal() + 
+  labs (subtitle="Past decade", y = "C", x = NULL) + 
+  theme(legend.position = c(.7,.9), legend.title = element_blank())
+
+```
+
+```{r}
+pnewyear+pdec +plot_layout(guides='collect')
+```
+
+```{r savefigs, include=FALSE}
+# Save figures to file
+ph <- 7   #Set height of exported pdf figure
+pw <- 14  #Set width of exported pdf figure
+ggsave("Jawbone.pdf", plot = p1, height = ph, width = pw, units='cm')
+ggsave("Jawbone_multi.pdf", plot = p2, height = ph, width = pw, units='cm')
+ggsave("Jawbone_multi2.pdf", plot = p2a, height = ph, width = pw, units='cm')
+ggsave("3sites2023.pdf", plot = p2023, height = ph, width = pw, units='cm')
+ggsave("3sites2024.pdf", plot = pnewyear, height = ph, width = pw, units='cm')
+
+```
+
+### Temperature contour map
+
+```{r  tempcontour, warning=FALSE}
+#Next two lines load coastline data for map plot. Easier to save to folder, and periodically run to check for updates
+#coast <- gisco_get_coastallines(resolution = 1, cache = TRUE, update_cache = TRUE)
+#save(coast,file = "coast.Rdata")
+load("coast.Rdata")
+ggplot() +
+  geom_contour_filled(data = subset(bay, date==latest_time), aes(x=longitude, y=latitude,z=sst)) +
+  scale_fill_viridis_d(name = "Temp (C)", option = "B", direction = -1, begin = 0.4, end = 0.9) +
+  geom_sf(data = coast, fill = "light grey") +
+  coord_sf(
+    xlim = lonx,
+    ylim = latx
+  )
+```

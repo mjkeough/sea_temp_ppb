@@ -1,10 +1,8 @@
 name: Render and publish SST report
-
 on:
   schedule:
-    - cron: '0 3 * * *'   # runs daily at 3am UTC
-  workflow_dispatch:        # allows manual trigger from GitHub
-
+    - cron: '0 3 * * *'
+  workflow_dispatch:
 jobs:
   render:
     runs-on: ubuntu-latest
@@ -13,15 +11,10 @@ jobs:
 
       - uses: r-lib/actions/setup-r@v2
 
-      - uses: r-lib/actions/setup-r-dependencies@v2
-        with:
-          packages: |
-            rmarkdown
-            tidyverse
-            rerddap
-            giscoR
-            patchwork
-            ggsci
+      - name: Install R packages
+        run: |
+          install.packages(c("rmarkdown", "tidyverse", "rerddap", "giscoR", "patchwork", "ggsci"))
+        shell: Rscript {0}
 
       - name: Render R Markdown
         run: Rscript -e 'rmarkdown::render("sea_temps_ppb.Rmd", output_file = "docs/index.html")'

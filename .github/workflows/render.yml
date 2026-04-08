@@ -14,11 +14,11 @@ jobs:
       - uses: r-lib/actions/setup-pandoc@v2
 
       - name: Install R packages
-         run: |
+        run: |
           options(repos = c(CRAN = "https://cloud.r-project.org"))
           install.packages(c("rmarkdown", "tidyverse", "rerddap", "giscoR", "patchwork", "ggsci"))
         shell: Rscript {0}
-
+        
       - name: Render R Markdown
         run: Rscript -e 'rmarkdown::render("sea_temps_ppb.Rmd", output_file = "docs/index.html")'
 

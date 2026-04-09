@@ -23,13 +23,13 @@ library(patchwork)
 
 
 The temperature records are satellite sea surface temperatures. They are provided in several places, and what's here comes from
-[NOAA](https://https://coastwatch.pfeg.noaa.gov/erddap/griddap/nesdisGeoPolarSSTN5NRT.html), presented as °C in the dataset *NOAA_DHW*. They come from grids 0.05° x 0.05°, corresponding to 5km x 5km. They can be viewed interactively, but it's not easy to look at multi-year time series or site comparisons.
+[NOAA](https://upwell.pfeg.noaa.gov/erddap/griddap/nesdisGeoPolarSSTN5NRT.html), presented as °C in the dataset *NOAA_DHW*. They come from grids 0.05° x 0.05°, corresponding to 5km x 5km. They can be viewed interactively, but it's not easy to look at multi-year time series or site comparisons.
 
 The closest grid cell to Williamstown beach is centred on Lon. 144.875, Lat. -37.875. Two other snorkelling/diving spots are included; the SE corner of the bay (Blairgowrie, Rye, etc.) is 144.775, -38.375, and just outside Western Port (near Flinders pier) is 145.025, -38.475.
 
 ```{r params, include=FALSE}
 #Set basic parameters for data download
-sstInfo <- info('NOAA_DHW', url = "https://coastwatch.pfeg.noaa.gov/erddap/")
+sstInfo <- info('NOAA_DHW', url = "https://upwell.pfeg.noaa.gov/erddap/")
 #Retrieves basic structure of NOAA dataset
 #Downloading using erddap protocol
 latx = c(-37.8, -38.525)    #Set bounding box for download
@@ -377,7 +377,7 @@ pdec <- ggplot(data = bay3, aes(x=day_plot, y=Mean10, group = site, colour = sit
 pnewyear+pdec +plot_layout(guides='collect')
 ```
 
-```{r savefigs, include=FALSE}
+```{r savefigs, include=FALSE, eval=FALSE}
 # Save figures to file
 ph <- 7   #Set height of exported pdf figure
 pw <- 14  #Set width of exported pdf figure

@@ -3,11 +3,14 @@ on:
   schedule:
     - cron: '0 3 * * *'
   workflow_dispatch:
+permissions:
+  contents: write
 jobs:
   render:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
 
       - uses: r-lib/actions/setup-r@v2
 

@@ -13,12 +13,18 @@ jobs:
 
       - uses: r-lib/actions/setup-pandoc@v2
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libcurl4-openssl-dev libssl-dev libxml2-dev libfontconfig1-dev libfreetype6-dev libpng-dev libtiff5-dev libjpeg-dev
+
       - name: Install R packages
         run: |
           options(repos = c(CRAN = "https://cloud.r-project.org"))
+          install.packages(c("googledrive", "googlesheets4", "httr", "ragg", "rvest"))
           install.packages(c("rmarkdown", "tidyverse", "rerddap", "giscoR", "patchwork", "ggsci"))
         shell: Rscript {0}
-
+        
       - name: Check packages
         run: |
           library(tidyverse)

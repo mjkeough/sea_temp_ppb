@@ -1,7 +1,7 @@
 name: Render and publish SST report
 on:
   schedule:
-    - cron: '0 3 * * *'
+    - cron: '0 1 * * *'
   workflow_dispatch:
 permissions:
   contents: write

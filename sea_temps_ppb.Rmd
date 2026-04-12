@@ -26,7 +26,7 @@ The temperature records are satellite sea surface temperatures sourced from [NOA
 
 The grid cell closest to Williamstown beach is centred on 144.875°E, 37.875°S. Two other snorkelling and diving sites are included: the south-east corner of the bay (Blairgowrie, Rye, and surrounds) at 144.775°E, 38.375°S, and a location just outside Western Port near Flinders Pier at 145.025°E, 38.475°S.
 
-```{r params, include=FALSE, eval= FALSE}
+```{r params, include=FALSE}
 #Downloading using erddap protocol
 #Set basic parameters for data download
 sstInfo <- info('NOAA_DHW', url = "https://upwell.pfeg.noaa.gov/erddap/")
@@ -51,7 +51,7 @@ load("bay.Rdata")     #Load saved file
 start <- as.Date(max(bay$time))+1   #Get next day after data in saved file
 ```
 
-```{r getdata, include=FALSE, eval=FALSE}
+```{r getdata, include=FALSE}
 timex = c(as.character(start), "last")   #Used to download only new data, rather than large data set each time
 baynew <- griddap(sstInfo, latitude = latx, longitude = lonx, time = timex, fmt= "csv", fields = 'CRW_SST')
 bay <- bind_rows(bay, baynew)  # Append to saved file

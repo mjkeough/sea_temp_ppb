@@ -22,14 +22,17 @@ library(patchwork)
 ```
 
 
-The temperature records are satellite sea surface temperatures sourced from [NOAA](https://upwell.pfeg.noaa.gov/erddap/griddap/nesdisGeoPolarSSTN5NRT.html) and presented as °C in the dataset *NOAA_DHW*. The data come from 0.05° × 0.05° grid cells, corresponding to approximately 5 km × 5 km. The data can be viewed interactively, but examining multi-year time series or making site comparisons is not straightforward.
+The temperature records used here are satellite sea surface temperatures. They are provided in several places, and what's here comes from
+[NOAA](https://pae-paha.pacioos.hawaii.edu/erddap/griddap/dhw_5km.html), presented as °C in the dataset *dhw_5km*. This dataset has data from grids 0.05° x 0.05°, corresponding to 5km x 5km.
 
-The grid cell closest to Williamstown beach is centred on 144.875°E, 37.875°S. Two other snorkelling and diving sites are included: the south-east corner of the bay (Blairgowrie, Rye, and surrounds) at 144.775°E, 38.375°S, and a location just outside Western Port near Flinders Pier at 145.025°E, 38.475°S.
+The closest grid cell to Williamstown beach is centred on Lon. 144.875, Lat. -37.875. Two other snorkelling/diving spots are included; the SE corner of the bay (Blairgowrie, Rye, etc.) is 144.775, -38.375, and just outside Western Port (near Flinders pier) is 145.025, -38.475.
+
+The temperatures are daily measurements, so the graphs are a bit noisy; some other places show temperatures averaged over a few days to smooth things out a bit.
 
 ```{r params, include=FALSE}
-#Downloading using erddap protocol
 #Set basic parameters for data download
-sstInfo <- info('NOAA_DHW', url = "https://upwell.pfeg.noaa.gov/erddap/")
+#Downloading using erddap protocol
+sstInfo <- info('dhw_5km', url = "https://pae-paha.pacioos.hawaii.edu/erddap/")
 #Retrieves basic structure of NOAA dataset
 ```
 
@@ -42,7 +45,7 @@ lonx = c(144.35, 145.3)
 #Use this chunk to make new clean copy of stored dataframe "bay"
 #Normally just update saved file each time
 timex = c("2003-01-01", "last")     #Start download from 2013
-bay <- griddap(sstInfo, latitude = latx, longitude = lonx, time = timex, fmt= "csv", fields = 'CRW_SST')
+bay <- griddap(sstInfo, latitude = latx, longitude = lonx, time = timex, fmt= "csv", fields = 'crw_sst')
 save(bay, file="bay.Rdata")  #Saved version from last run
 ```
 
@@ -53,7 +56,7 @@ start <- as.Date(max(bay$time))+1   #Get next day after data in saved file
 
 ```{r getdata, include=FALSE}
 timex = c(as.character(start), "last")   #Used to download only new data, rather than large data set each time
-baynew <- griddap(sstInfo, latitude = latx, longitude = lonx, time = timex, fmt= "csv", fields = 'CRW_SST')
+baynew <- griddap(sstInfo, latitude = latx, longitude = lonx, time = timex, fmt= "csv", fields = 'CRW_SST')   #Check; new mirror may use lower case crw...
 bay <- bind_rows(bay, baynew)  # Append to saved file
 bay <- unique(bay)
 save(bay, file="bay.Rdata")  #Save new version
@@ -157,7 +160,7 @@ if(month(latest_time)>3 & month(latest_time)<9) {
 
 #### Multi-year plots
 
-The first figure shows the current year with all years from 2014 onwards in the background; the second extends this to include all years since 2002. The third figure plots the current year against 10- and 20-year averages.
+The first figure shows the current year, other years from 2014 onwards in the background, and the second includes the past 22 years. The third figure shows the current year against 10- and 20-year averages.
 
 ```{r multipanel, include=FALSE}
 #Data goes from 2002 to present. Having 23 years' data is a bit spaghetti-like. Two options are to plot fewer years and/or emphasise the current year more. Do the first option by specifying a value for syear.
@@ -170,8 +173,8 @@ p2 <- ggplot(data = jawbone_all |> filter(year >= syear), aes(x = day_plot, y = 
   labs(y = "C", x = NULL, title = "Daily surface temperature each year") +
   theme_classic() +
   theme(
-    legend.title = element_blank(),
-    legend.text  = element_text(size = 5),
+    legend.title     = element_blank(),
+    legend.text      = element_text(size = 5),
     legend.spacing.y = unit(.25, "cm")
   ) +
   guides(fill = guide_legend(byrow = TRUE)) +
@@ -184,8 +187,8 @@ p2c <- ggplot(jawbone_all, aes(x = day_plot, y = sst)) +
   labs(y = "C", x = NULL, title = "Daily surface temperature each year") +
   theme_classic() +
   theme(
-    legend.title = element_blank(),
-    legend.text  = element_text(size = 5),
+    legend.title     = element_blank(),
+    legend.text      = element_text(size = 5),
     legend.spacing.y = unit(.25, "cm")
   ) +
   guides(fill = guide_legend(byrow = TRUE)) +
@@ -299,7 +302,7 @@ p2d
 
 ## Three places of interest to divers and snorkellers
 
-Open coast sites such as Flinders do not reach the same temperature extremes as those near the head of Port Phillip Bay (Williamstown). Sites near the bay entrance (Blairgowrie) are intermediate, being closer to open ocean conditions.
+Open coast sites, such as Flinders, don't get as warm or as cold as those near the top of Port Phillip Bay (Williamstown). Places near the entrance of the bay (Blairgowrie) are intermediate, but closer to open ocean conditions.
 
 ```{r threesite}
 # Filter each location for the desired year, add a site label, then combine
@@ -313,16 +316,15 @@ bay3 <- bind_rows(
 
 ```{r 3siteplotpen, include=FALSE}
 # Now do multi-site plot
-p2023 <- ggplot(data = bay3, aes(x = day_plot, y = sst, group = site, colour = site)) + 
+p2023 <- ggplot(data = bay3, aes(x=day_plot, y=sst, group = site, colour = site)) + 
   geom_line() + 
-  scale_y_continuous(breaks = seq(tmin, tmax, 1), limits = c(tmin, tmax)) + 
+  scale_y_continuous(breaks=seq(tmin,tmax,1), limits = c(tmin,tmax)) + 
   scale_x_date(date_breaks = "1 month", date_labels = "%b") +
   scale_colour_uchicago() +
   theme_minimal() + 
   labs (title = "Daily surface temperature, last year",
         subtitle=pyear, y = "C", x = NULL) + 
-  theme(legend.position = c(.7,.9), legend.title = element_blank()
-  )
+  theme(legend.position = c(.7,.9), legend.title = element_blank())
 p2023
 ```
 
@@ -335,10 +337,10 @@ bay3 <- bind_rows(
   bay |> filter(longitude == blon, latitude == blat, year == nyear) |> mutate(site = "Blair"),
   bay |> filter(longitude == flon, latitude == flat, year == nyear) |> mutate(site = "Flinders")
 )
-pnewyear <- ggplot(data = bay3, aes(x = day_plot, y = sst, group = site, colour = site)) + 
+pnewyear <- ggplot(data = bay3, aes(x=day_plot, y=sst, group = site, colour = site)) + 
   geom_line() + 
-#  geom_point(data = subset(bay3, time == max(time)), aes(x = day_plot, y = sst, group = site, colour = site)) +
-  scale_y_continuous(breaks = seq(tmin, tmax, 1), limits = c(tmin, tmax)) + 
+#  geom_point(data = subset(bay3, time == max(time)), aes(x=day_plot, y=sst, group = site, colour = site)) +
+  scale_y_continuous(breaks=seq(tmin,tmax,1), limits = c(tmin,tmax)) + 
   scale_x_date(date_breaks = "2 month", date_labels = "%b", limits = as_date(c("2020-01-01","2020-12-31"))) +
   scale_colour_uchicago() +
   theme_minimal() + 
@@ -360,7 +362,7 @@ bay3 <- bind_rows(
 
 pdec <- ggplot(data = bay3, aes(x=day_plot, y=Mean10, group = site, colour = site)) + 
   geom_line() + 
-  scale_y_continuous(breaks = seq(tmin, tmax, 1), limits = c(tmin, tmax)) + 
+  scale_y_continuous(breaks=seq(tmin,tmax,1), limits = c(tmin,tmax)) + 
   scale_x_date(date_breaks = "2 month", date_labels = "%b") +
   scale_colour_uchicago() +
   theme_minimal() + 

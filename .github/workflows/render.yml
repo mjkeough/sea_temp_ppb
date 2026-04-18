@@ -48,7 +48,10 @@ jobs:
           library(rmarkdown)
           cat("Packages loaded successfully\n")
         shell: Rscript {0}
-        
+ 
+      - name: Test ERDDAP connectivity
+        run: |
+          curl -v "https://pae-paha.pacioos.hawaii.edu/erddap/info/dhw_5km/index.csv" 2>&1 | head -50       
       - name: Render R Markdown
         run: Rscript -e 'rmarkdown::render("sea_temps_ppb.Rmd", output_file = "docs/index.html")'
 

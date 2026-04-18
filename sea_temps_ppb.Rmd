@@ -13,12 +13,11 @@ editor_options:
 knitr::opts_chunk$set(echo = FALSE)
 ```
 
-```{r include=FALSE}
+```{r loadlib, include=FALSE}
 library(tidyverse)
 library(ggsci)
 library(rerddap)
 library(giscoR)
-library(patchwork)
 ```
 
 
@@ -36,12 +35,12 @@ sstInfo <- info('dhw_5km', url = "https://pae-paha.pacioos.hawaii.edu/erddap/")
 #Retrieves basic structure of NOAA dataset
 ```
 
-```{r include=FALSE}
+```{r boundbox, include=FALSE}
 latx = c(-37.8, -38.525)    #Set bounding box for download
 lonx = c(144.35, 145.3)
 ```
 
-```{r include=FALSE, eval=FALSE}
+```{r cleancopy, include=FALSE, eval=FALSE}
 #Use this chunk to make new clean copy of stored dataframe "bay"
 #Normally just update saved file each time
 timex = c("2003-01-01", "last")     #Start download from 2013
@@ -372,7 +371,8 @@ pdec <- ggplot(data = bay3, aes(x=day_plot, y=Mean10, group = site, colour = sit
 ```
 
 ```{r}
-pnewyear + pdec + plot_layout(guides = 'collect')
+pnewyear
+pdec
 ```
 
 ```{r savefigs, include=FALSE, eval=FALSE}

@@ -46,35 +46,15 @@ jobs:
         run: |
           lib <- Sys.getenv("R_LIBS_USER")
           dir.create(lib, recursive = TRUE, showWarnings = FALSE)
+          options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/noble/latest"))
           install.packages(
-            c('knitr',
+            c('knitr', 'rmarkdown',
               'ggplot2', 'dplyr', 'tidyr', 'lubridate', 'readr', 'purrr',
-              'ggsci', 'rerddap'),
+              'ggsci', 'rerddap', 'giscoR'),
             lib = lib,
-            repos = 'https://cloud.r-project.org',
             dependencies = c('Depends', 'Imports', 'LinkingTo')
           )
-          missing <- c('ggplot2', 'dplyr', 'lubridate', 'ggsci', 'rerddap', 'giscoR')[
-            !c('rmarkdown', 'ggplot2', 'dplyr', 'lubridate', 'ggsci', 'rerddap') %in%
-            rownames(installed.packages(lib.loc = lib))
-          ]
-          if (length(missing) > 0) stop("Failed to install: ", paste(missing, collapse = ", "))
-          cat("All packages installed successfully\n")
           
-      - name: Install rmarkdown
-        shell: Rscript {0}
-        run: |
-          lib <- Sys.getenv("R_LIBS_USER")
-          install.packages('rmarkdown', lib = lib, repos = 'https://cloud.r-project.org')
-          cat("rmarkdown installed:", "rmarkdown" %in% rownames(installed.packages(lib.loc = lib)), "\n")
-
-      - name: Install giscoR
-        shell: Rscript {0}
-        run: |
-          lib <- Sys.getenv("R_LIBS_USER")
-          install.packages('giscoR', lib = lib, repos = 'https://cloud.r-project.org')
-          cat("giscoR installed:", "giscoR" %in% rownames(installed.packages(lib.loc = lib)), "\n")
-
       - name: Diagnose library
         shell: Rscript {0}
         run: |

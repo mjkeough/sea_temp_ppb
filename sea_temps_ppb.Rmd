@@ -14,7 +14,12 @@ knitr::opts_chunk$set(echo = FALSE)
 ```
 
 ```{r loadlib, include=FALSE}
-library(tidyverse)
+library(ggplot2)
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(readr)
+library(purrr)
 library(ggsci)
 library(rerddap)
 library(giscoR)

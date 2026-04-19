@@ -45,22 +45,22 @@ jobs:
         shell: Rscript {0}
         run: |
           lib <- Sys.getenv("R_LIBS_USER")
-          cat("Installing to:", lib, "\n")
           dir.create(lib, recursive = TRUE, showWarnings = FALSE)
           install.packages(
-            c('rmarkdown', 'knitr', 'tidyverse', 'ggsci', 'rerddap', 'giscoR'),
+            c('rmarkdown', 'knitr',
+              'ggplot2', 'dplyr', 'tidyr', 'lubridate', 'readr', 'purrr',
+              'ggsci', 'rerddap', 'giscoR'),
             lib = lib,
             repos = 'https://cloud.r-project.org',
             dependencies = TRUE
           )
-          # Verify install succeeded
-          missing <- c('rmarkdown', 'knitr', 'tidyverse', 'ggsci', 'rerddap', 'giscoR')[
-            !c('rmarkdown', 'knitr', 'tidyverse', 'ggsci', 'rerddap', 'giscoR') %in% 
+          missing <- c('rmarkdown', 'ggplot2', 'dplyr', 'lubridate', 'ggsci', 'rerddap', 'giscoR')[
+            !c('rmarkdown', 'ggplot2', 'dplyr', 'lubridate', 'ggsci', 'rerddap', 'giscoR') %in%
             rownames(installed.packages(lib.loc = lib))
           ]
           if (length(missing) > 0) stop("Failed to install: ", paste(missing, collapse = ", "))
           cat("All packages installed successfully\n")
-
+          
       - name: Diagnose library
         shell: Rscript {0}
         run: |

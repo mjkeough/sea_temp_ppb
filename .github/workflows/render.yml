@@ -1,20 +1,26 @@
 name: Render and publish SST report
+
 on:
   schedule:
     - cron: '0 23 * * *'
   workflow_dispatch:
+
 permissions:
   contents: write
+
 jobs:
   render:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v4.2.2
+      - uses: actions/checkout@v4
 
-      - uses: r-lib/actions/setup-r@v2.11.3
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          r-version: 'release'
 
-      - uses: r-lib/actions/setup-pandoc@v2.0.0
-      
+      - uses: r-lib/actions/setup-pandoc@v2
+
       - name: Install system dependencies
         run: |
           sudo apt-get update
@@ -34,32 +40,28 @@ jobs:
             libgdal-dev \
             libgeos-dev \
             libproj-dev
-            
+
       - name: Install R packages
         run: |
-          options(repos = c(CRAN = "https://cloud.r-project.org"))
-          install.packages(c("googledrive", "googlesheets4", "httr", "ragg", "rvest"))
-          install.packages(c("rmarkdown", "tidyverse", "rerddap", "giscoR", "patchwork", "ggsci"))
-        shell: Rscript {0}
-        
-      - name: Check packages
-        run: |
-          library(tidyverse)
-          library(rmarkdown)
-          cat("Packages loaded successfully\n")
-        shell: Rscript {0}
- 
+          Rscript -e "install.packages(
+            c('rmarkdown', 'knitr', 'tidyverse', 'ggsci', 'rerddap', 'giscoR'),
+            repos = 'https://cloud.r-project.org'
+          )"
+
       - name: Test ERDDAP connectivity
         run: |
-          curl -v "https://pae-paha.pacioos.hawaii.edu/erddap/info/dhw_5km/index.csv" 2>&1 | head -50       
+          curl -s -o /dev/null -w "%{http_code}" \
+            "https://pae-paha.pacioos.hawaii.edu/erddap/info/dhw_5km/index.csv"
+
       - name: Render R Markdown
-        run: Rscript -e 'rmarkdown::render("sea_temps_ppb.Rmd", output_file = "docs/index.html")'
+        run: |
+          Rscript -e "rmarkdown::render('sea_temps_ppb.Rmd', output_file = 'docs/index.html')"
 
       - name: Commit updated data and HTML
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add bay.Rdata coast.Rdata docs/index.html
-          git diff --staged --quiet || git commit -m "Daily update"
+          git add bay.Rdata docs/index.html
+          git diff --staged --quiet || git commit -m "Daily update $(date -u '+%Y-%m-%d')"
           git push
           

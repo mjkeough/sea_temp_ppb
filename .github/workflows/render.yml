@@ -52,7 +52,7 @@ jobs:
               'ggsci', 'rerddap'),
             lib = lib,
             repos = 'https://cloud.r-project.org',
-            dependencies = TRUE
+            dependencies = c('Depends', 'Imports', 'LinkingTo')
           )
           missing <- c('ggplot2', 'dplyr', 'lubridate', 'ggsci', 'rerddap', 'giscoR')[
             !c('rmarkdown', 'ggplot2', 'dplyr', 'lubridate', 'ggsci', 'rerddap') %in%

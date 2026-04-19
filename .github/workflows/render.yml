@@ -61,9 +61,12 @@ jobs:
 
       - name: Test ERDDAP connectivity
         run: |
-          curl -s -o /dev/null -w "%{http_code}" \
-            "https://pae-paha.pacioos.hawaii.edu/erddap/info/dhw_5km/index.csv"
-
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" "https://pae-paha.pacioos.hawaii.edu/erddap/info/dhw_5km/index.csv")
+          echo "HTTP status: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "ERDDAP unavailable (status $STATUS) — skipping render"
+            exit 0
+          fi
       - name: Render R Markdown
         shell: Rscript {0}
         run: |

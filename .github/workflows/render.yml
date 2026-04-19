@@ -11,7 +11,9 @@ permissions:
 jobs:
   render:
     runs-on: ubuntu-latest
-
+    env:
+      R_LIBS_USER: /home/runner/R/library 
+      
     steps:
       - uses: actions/checkout@v4
 

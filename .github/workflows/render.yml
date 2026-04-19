@@ -51,6 +51,14 @@ jobs:
             repos = 'https://cloud.r-project.org'
           )
 
+      - name: Diagnose library
+        shell: Rscript {0}
+        run: |
+          cat("R_LIBS_USER:", Sys.getenv("R_LIBS_USER"), "\n")
+          cat("libPaths:\n")
+          print(.libPaths())
+          cat("rmarkdown installed:", "rmarkdown" %in% rownames(installed.packages()), "\n")
+
       - name: Test ERDDAP connectivity
         run: |
           curl -s -o /dev/null -w "%{http_code}" \

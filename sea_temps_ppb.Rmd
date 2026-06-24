@@ -49,21 +49,24 @@ lonx = c(144.35, 145.3)
 #Use this chunk to make new clean copy of stored dataframe "bay"
 #Normally just update saved file each time
 timex = c("2003-01-01", "last")     #Start download from 2013
-bay <- griddap(sstInfo, latitude = latx, longitude = lonx, time = timex, fmt= "csv", fields = 'crw_sst')
+bay <- griddap(sstInfo, latitude = latx, longitude = lonx, time = timex, fmt= "csv", fields = 'CRW_SST')
 save(bay, file="bay.Rdata")  #Saved version from last run
 ```
 
 ```{r getstart, include=FALSE}
-load("bay.Rdata")     #Load saved file
-start <- as.Date(max(bay$time))+1   #Get next day after data in saved file
-```
-
-```{r getdata, include=FALSE}
-timex = c(as.character(start), "last")   #Used to download only new data, rather than large data set each time
-baynew <- griddap(sstInfo, latitude = latx, longitude = lonx, time = timex, fmt= "csv", fields = 'CRW_SST')   #Check; new mirror may use lower case crw...
-bay <- bind_rows(bay, baynew)  # Append to saved file
-bay <- unique(bay)
-save(bay, file="bay.Rdata")  #Save new version
+timex <- c(as.character(start), "last")
+baynew <- tryCatch(
+  griddap(sstInfo, latitude = latx, longitude = lonx,
+          time = timex, fmt = "csv", fields = 'CRW_SST'),
+  error = function(e) {
+    message("ERDDAP download failed: ", conditionMessage(e))
+    NULL
+  }
+)
+if (!is.null(baynew)) {
+  bay <- unique(bind_rows(bay, baynew))
+  save(bay, file = "bay.Rdata")
+}
 ```
 
 

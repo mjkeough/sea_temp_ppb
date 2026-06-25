@@ -67,7 +67,8 @@ jobs:
         id: erddap_check
         run: |
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
-            "https://pae-paha.pacioos.hawaii.edu/erddap/info/dhw_5km/index.csv")
+            "https://pae-paha.pacioos.hawaii.edu/erddap/info/dhw_5km/index.csv" || echo "000")
+          echo "HTTP status: $STATUS"
           echo "status=$STATUS" >> $GITHUB_OUTPUT
         continue-on-error: true
 

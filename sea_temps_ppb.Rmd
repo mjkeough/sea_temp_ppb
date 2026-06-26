@@ -34,10 +34,13 @@ The closest grid cell to Williamstown beach is centred on Lon. 144.875, Lat. -37
 The temperatures are daily measurements, so the graphs are a bit noisy; some other places show temperatures averaged over a few days to smooth things out a bit.
 
 ```{r params, include=FALSE}
-#Set basic parameters for data download
-#Downloading using erddap protocol
-sstInfo <- info('dhw_5km', url = "https://pae-paha.pacioos.hawaii.edu/erddap/")
-#Retrieves basic structure of NOAA dataset
+sstInfo <- tryCatch(
+  info('dhw_5km', url = "https://pae-paha.pacioos.hawaii.edu/erddap/"),
+  error = function(e) {
+    message("ERDDAP unavailable: ", conditionMessage(e))
+    NULL
+  }
+)
 ```
 
 ```{r boundbox, include=FALSE}

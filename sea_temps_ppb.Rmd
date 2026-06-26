@@ -57,6 +57,11 @@ save(bay, file="bay.Rdata")  #Saved version from last run
 ```
 
 ```{r getstart, include=FALSE}
+load("bay.Rdata")     #Load saved file
+start <- as.Date(max(bay$time))+1   #Get next day after data in saved file
+```
+
+```{r getdata, include=FALSE}
 timex <- c(as.character(start), "last")
 baynew <- tryCatch(
   griddap(sstInfo, latitude = latx, longitude = lonx,

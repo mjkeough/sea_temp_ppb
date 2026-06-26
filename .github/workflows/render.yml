@@ -45,6 +45,10 @@ jobs:
             dependencies = c('Depends', 'Imports', 'LinkingTo')
           )
 
+      - name: Test ERDDAP connectivity
+        run: |
+          curl -v "https://pae-paha.pacioos.hawaii.edu/erddap/info/dhw_5km/index.csv" 2>&1 | head -30
+
       - name: Render R Markdown
         shell: Rscript {0}
         run: |

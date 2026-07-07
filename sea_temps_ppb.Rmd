@@ -84,7 +84,7 @@ if (!is.null(sst_temp)) {
       sst      = as.numeric(analysed_sst) - 273.15,
       date     = with_tz(as.POSIXct(time, tz = "UTC"),
                          tzone = "Australia/Melbourne"),
-      time     = as.Date(time),
+      time     = as.Date(as.character(time)),
       year     = year(date),
       year_chr = as.character(year),
       day      = yday(date),
@@ -97,7 +97,7 @@ if (!is.null(sst_temp)) {
     ) |>
     select(longitude, latitude, time, sst, date, year, year_chr,
            day, day_plot, summer, myLabel)
-  bay <- bay |> mutate(time = as.Date(time))  # ensure consistent type
+  bay <- bay |> mutate(time = as.Date(as.character(time)))  # ensure consistent type
   bay <- unique(bind_rows(bay, baynew))
   save(bay, file = "bay.Rdata")
 }

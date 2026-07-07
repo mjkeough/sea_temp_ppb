@@ -57,9 +57,9 @@ t2 <- details$extent$temporal$interval[[1]][[2]]
 
 ```{r getstart, include=FALSE}
 load("bay.Rdata")     #Load saved file
-cat("time class after load:", class(bay$time), "\n")
+message("time class after load: ", class(bay$time))
 bay <- bay |> mutate(time = as.Date(as.character(time)))  # force Date regardless
-cat("time class after load:", class(bay$time), "\n")
+message("time class after load: ", class(bay$time))
 start <- as.Date(max(bay$time))+1   #Get next day after data in saved file
 t1 <- max(bay$time)
 details <- cms_product_details("SST_GLO_SST_L4_NRT_OBSERVATIONS_010_001")

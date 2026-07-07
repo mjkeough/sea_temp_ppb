@@ -4,3 +4,6 @@
 .Ruserdata
 .DS_Store
 *.csv
+.Renviron
+Older
+testcode.R

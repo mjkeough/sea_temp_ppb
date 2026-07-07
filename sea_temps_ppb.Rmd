@@ -21,80 +21,87 @@ library(lubridate)
 library(readr)
 library(purrr)
 library(ggsci)
-library(rerddap)
 library(giscoR)
+library(CopernicusMarine)
+library(CFtime)
+library(stars)
 ```
 
 
-The temperature records used here are satellite sea surface temperatures. They are provided in several places, and what's here comes from
-[NOAA](https://pae-paha.pacioos.hawaii.edu/erddap/griddap/dhw_5km.html), presented as °C in the dataset *dhw_5km*. This dataset has data from grids 0.05° x 0.05°, corresponding to 5km x 5km.
+The temperature records used here are satellite sea surface temperatures. They are provided in several places, and what's here comes from the European
+Copernicus service. This dataset has data from grids 0.05° x 0.05°, corresponding to 5km x 5km.
 
 The closest grid cell to Williamstown beach is centred on Lon. 144.875, Lat. -37.875. Two other snorkelling/diving spots are included; the SE corner of the bay (Blairgowrie, Rye, etc.) is 144.775, -38.375, and just outside Western Port (near Flinders pier) is 145.025, -38.475.
 
 The temperatures are daily measurements, so the graphs are a bit noisy; some other places show temperatures averaged over a few days to smooth things out a bit.
 
 ```{r params, include=FALSE}
-sstInfo <- tryCatch(
-  info('dhw_5km', url = "https://pae-paha.pacioos.hawaii.edu/erddap/"),
-  error = function(e) {
-    message("ERDDAP unavailable: ", conditionMessage(e))
-    NULL
-  }
+options(
+  CopernicusMarine_uid = Sys.getenv("COPERNICUS_UID"),
+  CopernicusMarine_pwd = Sys.getenv("COPERNICUS_PWD")
 )
 ```
 
 ```{r boundbox, include=FALSE}
 latx = c(-37.8, -38.525)    #Set bounding box for download
 lonx = c(144.35, 145.3)
+coprod <- "SST_GLO_SST_L4_NRT_OBSERVATIONS_010_001"  #Copernicus product
+colayer <- "METOFFICE-GLO-SST-L4-NRT-OBS-SST-V2"  #Copernicus dataset-id
+covar <- "analysed_sst"  #Copernicus variable
+coregion <- c(144.35, -38.80, 145.25, -37.80)  #Defines bounding box for Copernicus
+details <- cms_product_details("SST_GLO_SST_L4_NRT_OBSERVATIONS_010_001")
+t2 <- details$extent$temporal$interval[[1]][[2]]
 ```
 
-```{r cleancopy, include=FALSE, eval=FALSE}
-#Use this chunk to make new clean copy of stored dataframe "bay"
-#Normally just update saved file each time
-timex = c("2003-01-01", "last")     #Start download from 2013
-bay <- griddap(sstInfo, latitude = latx, longitude = lonx, time = timex, fmt= "csv", fields = 'CRW_SST')
-save(bay, file="bay.Rdata")  #Saved version from last run
-```
+
 
 ```{r getstart, include=FALSE}
 load("bay.Rdata")     #Load saved file
 start <- as.Date(max(bay$time))+1   #Get next day after data in saved file
+t1 <- max(bay$time)
+details <- cms_product_details("SST_GLO_SST_L4_NRT_OBSERVATIONS_010_001")
+t2 <- details$extent$temporal$interval[[1]][[2]]
 ```
 
 ```{r getdata, include=FALSE}
-timex <- c(as.character(start), "last")
-baynew <- tryCatch(
-  griddap(sstInfo, latitude = latx, longitude = lonx,
-          time = timex, fmt = "csv", fields = 'CRW_SST'),
+sst_temp <- tryCatch(
+  cms_download_subset(
+    product   = coprod,
+    layer     = colayer,
+    variable  = covar,
+    region    = coregion,
+    timerange = c(as.character(start), t2)
+  ),
   error = function(e) {
-    message("ERDDAP download failed: ", conditionMessage(e))
+    message("Copernicus download failed: ", conditionMessage(e))
     NULL
   }
 )
-if (!is.null(baynew)) {
+
+if (!is.null(sst_temp)) {
+  baynew <- as.data.frame(sst_temp) |>
+    mutate(
+      sst      = as.numeric(analysed_sst) - 273.15,
+      date     = with_tz(as.POSIXct(time, tz = "UTC"),
+                         tzone = "Australia/Melbourne"),
+      time     = as.Date(time),
+      year     = year(date),
+      year_chr = as.character(year),
+      day      = yday(date),
+      day_plot = as.Date("2019-12-31") + yday(date),
+      summer   = year + (month(date) >= 7),
+      myLabel  = case_when(
+        day(day_plot) == 1L ~ format(day_plot, "%b-%d"),
+        TRUE                ~ NA_character_
+      )
+    ) |>
+    select(longitude, latitude, time, sst, date, year, year_chr,
+           day, day_plot, summer, myLabel)
+  
   bay <- unique(bind_rows(bay, baynew))
   save(bay, file = "bay.Rdata")
 }
-```
-
-
-```{r tidy, include=FALSE}
-bay <- bay |>
-  mutate(
-    sst      = crw_sst,
-    date     = with_tz(ymd_hms(time), tzone = "Australia/Melbourne"),  # Convert to UTC+10
-    year     = year(date),                          # Year variable for grouping
-    year_chr = as.character(year),                  # Character year for multi-year plots
-    day      = yday(date),                          # Day of year
-    day_plot = as.Date("2019-12-31") + yday(date),  # Variable for m/d plots
-    summer   = year + (month(date) >= 7),           # Grouping by summer
-    myLabel  = case_when(                           # Label for 1st of each month
-      day(day_plot) == 1L ~ format(day_plot, "%b-%d"),
-      TRUE               ~ NA_character_
-    )
-  )
-latest_time <- max(bay$date)
-latest      <- date(latest_time)
+latest <- max(bay$date)
 ```
 
 
@@ -190,8 +197,7 @@ p2 <- ggplot(data = jawbone_all |> filter(year >= syear), aes(x = day_plot, y = 
   theme(
     legend.title     = element_blank(),
     legend.text      = element_text(size = 5),
-    legend.spacing.y = unit(.25, "cm")
-  ) +
+legend.spacing.y = grid::unit(.25, "cm")) +
   guides(fill = guide_legend(byrow = TRUE)) +
   facet_wrap(vars(year))
 
@@ -204,7 +210,7 @@ p2c <- ggplot(jawbone_all, aes(x = day_plot, y = sst)) +
   theme(
     legend.title     = element_blank(),
     legend.text      = element_text(size = 5),
-    legend.spacing.y = unit(.25, "cm")
+legend.spacing.y = grid::unit(.25, "cm")
   ) +
   guides(fill = guide_legend(byrow = TRUE)) +
   facet_wrap(vars(year), ncol = 4)
@@ -356,7 +362,7 @@ pnewyear <- ggplot(data = bay3, aes(x=day_plot, y=sst, group = site, colour = si
   geom_line() + 
 #  geom_point(data = subset(bay3, time == max(time)), aes(x=day_plot, y=sst, group = site, colour = site)) +
   scale_y_continuous(breaks=seq(tmin,tmax,1), limits = c(tmin,tmax)) + 
-  scale_x_date(date_breaks = "2 month", date_labels = "%b", limits = as_date(c("2020-01-01","2020-12-31"))) +
+  scale_x_date(date_breaks = "2 month", date_labels = "%b", limits = as.Date(c("2020-01-01","2020-12-31"))) +
   scale_colour_uchicago() +
   theme_minimal() + 
   labs (subtitle=nyear, y = "C", x = NULL) + 
@@ -391,18 +397,6 @@ pnewyear
 pdec
 ```
 
-```{r savefigs, include=FALSE, eval=FALSE}
-# Save figures to file
-ph <- 7   #Set height of exported pdf figure
-pw <- 14  #Set width of exported pdf figure
-ggsave("Jawbone.pdf", plot = p1, height = ph, width = pw, units='cm')
-ggsave("Jawbone_multi.pdf", plot = p2, height = ph, width = pw, units='cm')
-ggsave("Jawbone_multi2.pdf", plot = p2a, height = ph, width = pw, units='cm')
-ggsave("3sites2023.pdf", plot = p2023, height = ph, width = pw, units='cm')
-ggsave("3sites2024.pdf", plot = pnewyear, height = ph, width = pw, units='cm')
-
-```
-
 ### Temperature contour map
 
 ```{r  tempcontour, warning=FALSE}
@@ -411,7 +405,10 @@ ggsave("3sites2024.pdf", plot = pnewyear, height = ph, width = pw, units='cm')
 #save(coast,file = "coast.Rdata")
 load("coast.Rdata")
 ggplot() +
-  geom_contour_filled(data = bay |> filter(date == latest_time), aes(x = longitude, y = latitude, z = sst)) +
+  geom_contour_filled(
+    data = bay |> filter(as.Date(date) == as.Date(latest_time)), 
+    aes(x = longitude, y = latitude, z = sst)
+  ) +
   scale_fill_viridis_d(name = "Temp (C)", option = "B", direction = -1, begin = 0.4, end = 0.9) +
   geom_sf(data = coast, fill = "light grey") +
   coord_sf(

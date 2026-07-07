@@ -31,7 +31,7 @@ jobs:
             libtiff5-dev libjpeg-dev libharfbuzz-dev libfribidi-dev \
             libnetcdf-dev libudunits2-dev libgdal-dev libgeos-dev libproj-dev
 
-- name: Install R packages
+      - name: Install R packages
         shell: Rscript {0}
         run: |
           lib <- Sys.getenv("R_LIBS_USER")

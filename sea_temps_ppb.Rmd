@@ -97,7 +97,7 @@ if (!is.null(sst_temp)) {
     ) |>
     select(longitude, latitude, time, sst, date, year, year_chr,
            day, day_plot, summer, myLabel)
-  
+  bay <- bay |> mutate(time = as.Date(time))  # ensure consistent type
   bay <- unique(bind_rows(bay, baynew))
   save(bay, file = "bay.Rdata")
 }

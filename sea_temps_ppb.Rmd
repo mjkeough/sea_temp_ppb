@@ -176,7 +176,7 @@ p1a <- ggplot(data = df, aes(x = order, y = sst, group = as.factor(summer), colo
 
 ```{r}
 # Choose plot to do based on time of year; use Jan-Dec from April to Aug, Jul-June at other times of year
-if(month(latest_time)>3 & month(latest_time)<9) {
+if(month(latest)>3 & month(latest)<9) {
   p1
 } else {
   p1a
@@ -276,12 +276,12 @@ p2f <- ggplot(data = df, aes(x = order, y = sst, group = summer)) +
 
 ```{r}
 # Choose plot to do based on time of year; use Jan-Dec from April to Aug, Jul-June at other times of year
-if(month(latest_time)>3 & month(latest_time)<9) {
+if(month(latest)>3 & month(latest)<9) {
   p2a
 } else {
   p2e
 }
-if(month(latest_time)>3 & month(latest_time)<9) {
+if(month(latest)>3 & month(latest)<9) {
   p2b
 } else {
   p2f
@@ -409,7 +409,7 @@ pdec
 load("coast.Rdata")
 ggplot() +
   geom_contour_filled(
-    data = bay |> filter(as.Date(date) == as.Date(latest_time)), 
+    data = bay |> filter(as.Date(date) == as.Date(latest)), 
     aes(x = longitude, y = latitude, z = sst)
   ) +
   scale_fill_viridis_d(name = "Temp (C)", option = "B", direction = -1, begin = 0.4, end = 0.9) +

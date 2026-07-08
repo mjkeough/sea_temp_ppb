@@ -125,8 +125,10 @@ pyear <- nyear-1    #Set penultimate year
 syear <- 2014  #Starting year for plots
 tmax <- ceiling(max(bay$sst, na.rm = TRUE))
 tmin <- floor(min(bay$sst, na.rm = TRUE))
-wlatest <- bay |> filter(time == max(time), longitude == wlon, latitude == wlat)
-wtemp   <- paste(format(latest, "%A, %B %d, %Y"), round(wlatest$sst, digits = 1), sep = ": ")
+wlatest <- bay |> 
+     filter(longitude == wlon, latitude == wlat) |>
+     filter(time == max(time))
+wtemp   <- paste(format(wlatest$date, "%A, %B %d, %Y"), round(wlatest$sst, digits = 1), sep = ": ")
 
 ```
 

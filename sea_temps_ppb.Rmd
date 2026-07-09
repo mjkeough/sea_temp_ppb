@@ -84,6 +84,8 @@ sst_temp <- tryCatch(
 if (!is.null(sst_temp)) {
   baynew <- as.data.frame(sst_temp) |>
     mutate(
+      latitude  = round(latitude, 3),
+      longitude = round(longitude, 3),
       sst      = as.numeric(analysed_sst) - 273.15,
       date     = with_tz(as.POSIXct(time, tz = "UTC"),
                          tzone = "Australia/Melbourne"),

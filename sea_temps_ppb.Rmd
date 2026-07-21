@@ -27,13 +27,25 @@ library(CFtime)
 library(stars)
 ```
 
+The temperatures shown here are sea surface temperatures derived from
+satellites. They are provided in several places, and what's here comes
+from the European Union Copernicus service. This dataset has the global
+oceans divided into grids 0.05° x 0.05°, corresponding roughly to 5km x
+5km.
 
-The temperature records used here are satellite sea surface temperatures. They are provided in several places, and what's here comes from the European
-Copernicus service. This dataset has data from grids 0.05° x 0.05°, corresponding to 5km x 5km.
+The closest grid cell to Williamstown beach is centred on Lon. 144.875,
+Lat. -37.875. It's a little bit out in Hobsons Bay, as the global data
+set excludes grid with a substantial proportion of land. As a result,
+the shallow water right on the coast isn't included, and that water can
+get cooler or warmer than further offshore particularly on calm days.
+Two other snorkelling/diving spots are included; the SE corner of the
+bay (Blairgowrie, Rye, etc.) is 144.775, -38.375, and just outside
+Western Port (near Flinders pier) is 145.025, -38.475.
 
-The closest grid cell to Williamstown beach is centred on Lon. 144.875, Lat. -37.875. Two other snorkelling/diving spots are included; the SE corner of the bay (Blairgowrie, Rye, etc.) is 144.775, -38.375, and just outside Western Port (near Flinders pier) is 145.025, -38.475.
-
-The temperatures are daily measurements, so the graphs are a bit noisy; some other places show temperatures averaged over a few days to smooth things out a bit.
+The temperatures are daily measurements, so the graphs are a bit noisy;
+some other places, such as
+[baywinds](http://www.baywx.com.au/temps.html "Link to an alternative sea water temperature site, baywinds")
+show temperatures averaged over a few days to smooth things out a bit.
 
 ```{r params, include=FALSE}
 options(
@@ -52,8 +64,6 @@ coregion <- c(144.35, -38.80, 145.25, -37.80)  #Defines bounding box for Coperni
 details <- cms_product_details("SST_GLO_SST_L4_NRT_OBSERVATIONS_010_001")
 t2 <- details$extent$temporal$interval[[1]][[2]]
 ```
-
-
 
 ```{r getstart, include=FALSE}
 load("bay.Rdata")     #Load saved file
@@ -109,7 +119,6 @@ if (!is.null(sst_temp)) {
 latest <- max(bay$date)
 ```
 
-
 ```{r boundaries, include=FALSE}
 #For convenience, set 3 desired locations as variables:
 wlon <- 144.875
@@ -124,7 +133,7 @@ flat <- -38.475
 # For viewing data from a single specific year, set value of pyear, rather than using formula below.
 nyear <- max(bay$year)    #Current year in downloaded data
 pyear <- nyear-1    #Set penultimate year
-syear <- 2014  #Starting year for plots
+syear <- pyear-9  #Starting year for plots as past decade before current year
 tmax <- ceiling(max(bay$sst, na.rm = TRUE))
 tmin <- floor(min(bay$sst, na.rm = TRUE))
 wlatest <- bay |> 
@@ -134,7 +143,7 @@ wtemp   <- paste(format(wlatest$date, "%A, %B %d, %Y"), round(wlatest$sst, digit
 
 ```
 
-## Williamstown time series
+## Williamstown
 
 #### Current year, with last year for an immediate comparison
 
@@ -178,7 +187,7 @@ p1a <- ggplot(data = df, aes(x = order, y = sst, group = as.factor(summer), colo
   theme(axis.text.x = element_text(angle = 90), legend.title = element_blank())
 ```
 
-```{r}
+```{r pickgraph}
 # Choose plot to do based on time of year; use Jan-Dec from April to Aug, Jul-June at other times of year
 if(month(latest)>3 & month(latest)<9) {
   p1
@@ -189,7 +198,10 @@ if(month(latest)>3 & month(latest)<9) {
 
 #### Multi-year plots
 
-The first figure shows the current year, other years from 2014 onwards in the background, and the second includes the past 22 years. The third figure shows the current year against 10- and 20-year averages.
+The first figure shows the current year, other years from the past
+decade onwards in the background, and the second includes the data since
+2002. The third figure shows the current year against 10-year and
+post-2002 averages.
 
 ```{r multipanel, include=FALSE}
 #Data goes from 2002 to present. Having 23 years' data is a bit spaghetti-like. Two options are to plot fewer years and/or emphasise the current year more. Do the first option by specifying a value for syear.
@@ -199,7 +211,7 @@ p2 <- ggplot(data = jawbone_all |> filter(year >= syear), aes(x = day_plot, y = 
   geom_line(linewidth = 0.25) +
   scale_y_continuous(breaks = seq(tmin, tmax, 2)) +
   scale_x_date(date_breaks = "2 month", date_labels = "%b") +
-  labs(y = "C", x = NULL, title = "Daily surface temperature each year") +
+  labs(y = "C", x = NULL, title = "Daily surface temperature each year in past decade") +
   theme_classic() +
   theme(
     legend.title     = element_blank(),
@@ -212,7 +224,7 @@ p2c <- ggplot(jawbone_all, aes(x = day_plot, y = sst)) +
   geom_line(linewidth = 0.25) +
   scale_y_continuous(breaks = seq(tmin, tmax, 2)) +
   scale_x_date(date_breaks = "2 month", date_labels = "%b") +
-  labs(y = "C", x = NULL, title = "Daily surface temperature each year") +
+  labs(y = "C", x = NULL, title = "Daily surface temperature each year since 2002") +
   theme_classic() +
   theme(
     legend.title     = element_blank(),
@@ -223,7 +235,6 @@ legend.spacing.y = grid::unit(.25, "cm")
   facet_wrap(vars(year), ncol = 4)
 ```
 
-
 ```{r greymulti, include=FALSE}
 jawbone_all <- jawbone_all |>
   group_by(summer) |>
@@ -231,7 +242,7 @@ jawbone_all <- jawbone_all |>
   ungroup()
 
 jawbone_2014 <- jawbone_all |>
-  filter(year > syear) |>
+  filter(year >= syear) |>
   group_by(summer) |>
   mutate(order = row_number()) |>
   ungroup()
@@ -243,7 +254,7 @@ p2a <- ggplot(df, aes(x = day_plot, y = sst, group = year_chr)) +
   geom_line(data = df |> filter(year > pyear), aes(x = day_plot, y = sst), color = "blue", linewidth = 1) +
   scale_y_continuous(breaks = seq(tmin, tmax, 1)) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b") +
-  labs(y = "C", x = NULL, title = "Daily surface temperature, since 2014") +
+  labs(y = "C", x = NULL, title = "Daily surface temperature, past decade") +
   theme_minimal() +
   theme(legend.title = element_blank())
 
@@ -257,13 +268,13 @@ p2b <- ggplot(df, aes(x = day_plot, y = sst, group = year_chr)) +
   theme_minimal() +
   theme(legend.title = element_blank())
 
-df  <- jawbone_all |> filter(year > syear)
+df  <- jawbone_all |> filter(year >= syear)
 p2e <- ggplot(df, aes(x = order, y = sst, group = summer)) +
   geom_line(colour = "grey60", linewidth = 0.25) +
   geom_line(data = df |> filter(summer > pyear), aes(x = order, y = sst), color = "blue", linewidth = 1) +
   scale_y_continuous(breaks = seq(tmin, tmax, 1)) +
   scale_x_continuous(breaks = x_break, labels = x_label) +
-  labs(y = "C", x = NULL, title = "Daily surface temperature, since 2014") +
+  labs(y = "C", x = NULL, title = "Daily surface temperature, past decade") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90), legend.title = element_blank())
 
@@ -273,12 +284,12 @@ p2f <- ggplot(data = df, aes(x = order, y = sst, group = summer)) +
   geom_line(data = df |> filter(summer > pyear), aes(x = order, y = sst), color = "blue", linewidth = 1) +
   scale_y_continuous(breaks = seq(tmin, tmax, 1)) +
   scale_x_continuous(breaks = x_break, labels = x_label) +
-  labs(y = "C", x = NULL, title = "Daily surface temperature, since 2003") +
+  labs(y = "C", x = NULL, title = "Daily surface temperature, since 2002") +
   theme_minimal() +
   theme(axis.text.x = element_text(angle = 90), legend.title = element_blank())
 ```
 
-```{r}
+```{r pickmulti}
 # Choose plot to do based on time of year; use Jan-Dec from April to Aug, Jul-June at other times of year
 if(month(latest)>3 & month(latest)<9) {
   p2a
@@ -293,7 +304,6 @@ if(month(latest)>3 & month(latest)<9) {
 
 #p2c
 ```
-
 
 ```{r vsmean}
 #Plot instead using averages for whole period or from syear onwards
@@ -320,7 +330,7 @@ p2d <- ggplot(data = jawbone_all, aes(x = day_plot, y = sst, group = year_chr)) 
     y        = "C",
     x        = NULL,
     title    = "Daily surface temperature",
-    subtitle = "Averages since 2014 (red) and since 2002 (orange)"
+    subtitle = "Averages since 2002 (orange) and past decade (red)"
   ) +
   theme_minimal() +
   theme(legend.title = element_blank())
@@ -330,7 +340,10 @@ p2d
 
 ## Three places of interest to divers and snorkellers
 
-Open coast sites, such as Flinders, don't get as warm or as cold as those near the top of Port Phillip Bay (Williamstown). Places near the entrance of the bay (Blairgowrie) are intermediate, but closer to open ocean conditions.
+Open coast sites, such as Flinders, don't get as warm or as cold as
+those near the top of Port Phillip Bay (Williamstown). Places near the
+entrance of the bay (Blairgowrie, Rye) are intermediate, but closer to
+open ocean conditions.
 
 ```{r threesite}
 # Filter each location for the desired year, add a site label, then combine
@@ -340,7 +353,6 @@ bay3 <- bind_rows(
   bay |> filter(longitude == flon, latitude == flat, year == pyear) |> mutate(site = "Flinders")
 )
 ```
-
 
 ```{r 3siteplotpen, include=FALSE}
 # Now do multi-site plot
@@ -355,7 +367,6 @@ p2023 <- ggplot(data = bay3, aes(x=day_plot, y=sst, group = site, colour = site)
   theme(legend.position = c(.7,.9), legend.title = element_blank())
 p2023
 ```
-
 
 ```{r 3siteplotcurr, include=FALSE}
 # Do three place time series current year
@@ -399,7 +410,7 @@ pdec <- ggplot(data = bay3, aes(x=day_plot, y=Mean10, group = site, colour = sit
 
 ```
 
-```{r}
+```{r pickmultisite}
 pnewyear
 pdec
 ```

@@ -29,13 +29,22 @@ library(stars)
 
 The temperatures shown here are sea surface temperatures derived from
 satellites. They are provided in several places, and what's here comes
-from the European Union Copernicus service. This dataset has the global
-oceans divided into grids 0.05° x 0.05°, corresponding roughly to 5km x
-5km.
+from the European Union Copernicus service. This dataset
+(SST_GLO_SST_L4_NRT_OBSERVATIONS_010_001) has the global oceans divided
+into grids 0.05° x 0.05°, corresponding roughly to 5km x 5km. It
+provides
+"[Foundation](https://www.ghrsst.org/ghrsst-data-services/for-sst-data-users/products/#section5 "Link to definition of foundation temperature")"
+temperature, which is the temperature of the uppermost layer of the
+ocean (typically at a depth of a few centimetres to several meters) that
+is not affected by diurnal warming or surface cooling due to solar
+radiation or wind mixing. It represents the baseline or background sea
+surface temperature from which the diurnal cycle grows each day.
 
-The closest grid cell to Williamstown beach is centred on Lon. 144.875,
-Lat. -37.875. It's a little bit out in Hobsons Bay, as the global data
-set excludes grid with a substantial proportion of land. As a result,
+The closest grid cell to Williamstown beach is centred on [Lon. 144.875,
+Lat.
+-37.875](https://www.google.com/maps/place/37°52'30.0%22S+144°52'30.0%22E/@-37.8749957,144.8338013,13z/data=!4m4!3m3!8m2!3d-37.875!4d144.875?entry=ttu&g_ep=EgoyMDI2MDcyMC4wIKXMDSoASAFQAw%3D%3D "Link to google maps").
+It's a little bit offshore from the Jawbone, as the global data set
+excludes grid cells with a substantial proportion of land. As a result,
 the shallow water right on the coast isn't included, and that water can
 get cooler or warmer than further offshore particularly on calm days.
 Two other snorkelling/diving spots are included; the SE corner of the
@@ -44,7 +53,7 @@ Western Port (near Flinders pier) is 145.025, -38.475.
 
 The temperatures are daily measurements, so the graphs are a bit noisy;
 some other places, such as
-[baywinds](http://www.baywx.com.au/temps.html "Link to an alternative sea water temperature site, baywinds")
+[baywinds](http://www.baywx.com.au/temps.html "Link to an alternative sea water temperature site, baywinds"),
 show temperatures averaged over a few days to smooth things out a bit.
 
 ```{r params, include=FALSE}
@@ -201,7 +210,8 @@ if(month(latest)>3 & month(latest)<9) {
 The first figure shows the current year, other years from the past
 decade onwards in the background, and the second includes the data since
 2002. The third figure shows the current year against 10-year and
-post-2002 averages.
+post-2002 averages. The fourth shows temperature anomalies - how this
+year's temperature compares to the average since 2002.
 
 ```{r multipanel, include=FALSE}
 #Data goes from 2002 to present. Having 23 years' data is a bit spaghetti-like. Two options are to plot fewer years and/or emphasise the current year more. Do the first option by specifying a value for syear.
@@ -336,6 +346,27 @@ p2d <- ggplot(data = jawbone_all, aes(x = day_plot, y = sst, group = year_chr)) 
   theme(legend.title = element_blank())
 p2d
 
+# Current year data with anomaly using l20y mean
+anomaly <- jawbone_all |>
+  filter(year > pyear) |>
+  left_join(distinct(l20y, day_plot, Mean20), by = "day_plot") |>
+  mutate(anomaly = sst - Mean20)
+
+# Plot
+p2e <- ggplot(anomaly, aes(x = day_plot, y = anomaly)) +
+  geom_hline(yintercept = 0, colour = "grey50", linetype = "dashed") +
+  geom_line(colour = "blue", linewidth = 0.75) +
+  geom_ribbon(aes(ymin = pmin(anomaly, 0), ymax = 0), fill = "blue", alpha = 0.2) +
+  geom_ribbon(aes(ymin = 0, ymax = pmax(anomaly, 0)), fill = "red", alpha = 0.2) +
+  scale_x_date(date_breaks = "1 month", date_labels = "%b") +
+  labs(
+    y        = "°C",
+    x        = NULL,
+    title    = "SST anomaly - current year",
+    subtitle = "Anomaly relative to long-term mean (blue = below, red = above)"
+  ) +
+  theme_minimal()
+p2e
 ```
 
 ## Three places of interest to divers and snorkellers

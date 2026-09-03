@@ -175,25 +175,33 @@ p1 <- ggplot(
 ```
 
 ```{r jawbonesummer, include=FALSE}
+current_summer <- max(bay$summer, na.rm = TRUE)
 df <- bay |>
-  filter(summer >= pyear, longitude == wlon, latitude == wlat) |>
+  filter(summer %in% c(current_summer - 1, current_summer), 
+         longitude == wlon, latitude == wlat) |>
   group_by(summer) |>
   mutate(order = row_number()) |>
   ungroup()
-x_break <- df$order[!is.na(df$myLabel)][1:12]
-x_label <- df$myLabel[x_break]
+x_labels_df <- df |>
+  filter(summer == min(summer), day(date) == 1) |>
+  select(order, date) |>
+  mutate(x_label = format(date, "%b"))
+
+x_break <- x_labels_df$order
+x_label <- x_labels_df$x_label
+
 p1a <- ggplot(data = df, aes(x = order, y = sst, group = as.factor(summer), colour = as.factor(summer))) +
-  geom_line() +
+  geom_line(na.rm = TRUE) +
   geom_point(
     data = df |> filter(summer > pyear, time == max(time)),
-    aes(x = order, y = sst)
+    aes(x = order, y = sst), na.rm = TRUE
   ) +
   scale_y_continuous(breaks = seq(tmin, tmax, 1), limits = c(tmin, tmax)) +
   scale_x_continuous(breaks = x_break, labels = x_label) +
   labs(y = "C", x = NULL, title = "Sea surface temperature, Williamstown", caption = wtemp) +
   theme_minimal() +
   scale_color_aaas(labels = c("Last summer", "This summer")) +
-  theme(axis.text.x = element_text(angle = 90), legend.title = element_blank())
+  theme(legend.title = element_blank())
 ```
 
 ```{r pickgraph}
@@ -278,25 +286,35 @@ p2b <- ggplot(df, aes(x = day_plot, y = sst, group = year_chr)) +
   theme_minimal() +
   theme(legend.title = element_blank())
 
-df  <- jawbone_all |> filter(year >= syear)
+# Recalculate x labels from jawbone_all
+x_labels_df <- jawbone_all |>
+  filter(summer == min(summer[summer >= current_summer - 1]), day(date) == 1) |>
+  select(order, date) |>
+  mutate(x_label = format(date, "%b"))
+x_break <- x_labels_df$order
+x_label <- x_labels_df$x_label
+
+df <- jawbone_all |> filter(year >= syear)
 p2e <- ggplot(df, aes(x = order, y = sst, group = summer)) +
-  geom_line(colour = "grey60", linewidth = 0.25) +
-  geom_line(data = df |> filter(summer > pyear), aes(x = order, y = sst), color = "blue", linewidth = 1) +
+  geom_line(colour = "grey60", linewidth = 0.25, na.rm = TRUE) +
+  geom_line(data = df |> filter(summer == max(summer)), 
+            aes(x = order, y = sst), color = "blue", linewidth = 1, na.rm = TRUE) +
   scale_y_continuous(breaks = seq(tmin, tmax, 1)) +
   scale_x_continuous(breaks = x_break, labels = x_label) +
   labs(y = "C", x = NULL, title = "Daily surface temperature, past decade") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90), legend.title = element_blank())
+  theme(axis.text.x = element_text(angle = 0), legend.title = element_blank())
 
-df  <- jawbone_all |> filter(year > min(jawbone_all$year))
-p2f <- ggplot(data = df, aes(x = order, y = sst, group = summer)) +
-  geom_line(colour = "grey60", linewidth = 0.25) +
-  geom_line(data = df |> filter(summer > pyear), aes(x = order, y = sst), color = "blue", linewidth = 1) +
+df <- jawbone_all |> filter(summer > min(summer))
+p2f <- ggplot(df, aes(x = order, y = sst, group = summer)) +
+  geom_line(colour = "grey60", linewidth = 0.25, na.rm = TRUE) +
+  geom_line(data = df |> filter(summer == max(summer)), 
+            aes(x = order, y = sst), color = "blue", linewidth = 1, na.rm = TRUE) +
   scale_y_continuous(breaks = seq(tmin, tmax, 1)) +
   scale_x_continuous(breaks = x_break, labels = x_label) +
   labs(y = "C", x = NULL, title = "Daily surface temperature, since 2002") +
   theme_minimal() +
-  theme(axis.text.x = element_text(angle = 90), legend.title = element_blank())
+  theme(axis.text.x = element_text(angle = 0), legend.title = element_blank())
 ```
 
 ```{r pickmulti}
@@ -331,9 +349,9 @@ l20y <- bay |>
 
 p2d <- ggplot(data = jawbone_all, aes(x = day_plot, y = sst, group = year_chr)) +
 #  geom_line(colour = "grey60", linewidth = 0.25) +
-  geom_line(data = jawbone_all |> filter(year > pyear), aes(x = day_plot, y = sst), color = "blue", linewidth = 1) +
-  geom_line(data = l10y, aes(x = day_plot, y = Mean10), color = "red", linewidth = 0.5) +
-  geom_line(data = l20y, aes(x = day_plot, y = Mean20), color = "orange", linewidth = 0.5) +
+  geom_line(data = jawbone_all |> filter(year > pyear), aes(x = day_plot, y = sst), color = "blue", linewidth = 1, na.rm = TRUE) +
+  geom_line(data = l10y, aes(x = day_plot, y = Mean10), color = "red", linewidth = 0.5, na.rm = TRUE) +
+  geom_line(data = l20y, aes(x = day_plot, y = Mean20), color = "orange", linewidth = 0.5, na.rm = TRUE) +
   scale_y_continuous(breaks = seq(tmin, tmax, 1)) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b") +
   labs(
@@ -355,9 +373,9 @@ anomaly <- jawbone_all |>
 # Plot
 p2e <- ggplot(anomaly, aes(x = day_plot, y = anomaly)) +
   geom_hline(yintercept = 0, colour = "grey50", linetype = "dashed") +
-  geom_line(colour = "blue", linewidth = 0.75) +
-  geom_ribbon(aes(ymin = pmin(anomaly, 0), ymax = 0), fill = "blue", alpha = 0.2) +
-  geom_ribbon(aes(ymin = 0, ymax = pmax(anomaly, 0)), fill = "red", alpha = 0.2) +
+  geom_line(colour = "blue", linewidth = 0.75, na.rm = TRUE) +
+  geom_ribbon(aes(ymin = pmin(anomaly, 0), ymax = 0), fill = "blue", alpha = 0.2, na.rm = TRUE) +
+  geom_ribbon(aes(ymin = 0, ymax = pmax(anomaly, 0)), fill = "red", alpha = 0.2, na.rm = TRUE) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b") +
   labs(
     y        = "°C",
@@ -388,7 +406,7 @@ bay3 <- bind_rows(
 ```{r 3siteplotpen, include=FALSE}
 # Now do multi-site plot
 p2023 <- ggplot(data = bay3, aes(x=day_plot, y=sst, group = site, colour = site)) + 
-  geom_line() + 
+  geom_line(na.rm = TRUE) + 
   scale_y_continuous(breaks=seq(tmin,tmax,1), limits = c(tmin,tmax)) + 
   scale_x_date(date_breaks = "1 month", date_labels = "%b") +
   scale_colour_uchicago() +
@@ -408,7 +426,7 @@ bay3 <- bind_rows(
   bay |> filter(longitude == flon, latitude == flat, year == nyear) |> mutate(site = "Flinders")
 )
 pnewyear <- ggplot(data = bay3, aes(x=day_plot, y=sst, group = site, colour = site)) + 
-  geom_line() + 
+  geom_line(na.rm = TRUE) + 
 #  geom_point(data = subset(bay3, time == max(time)), aes(x=day_plot, y=sst, group = site, colour = site)) +
   scale_y_continuous(breaks=seq(tmin,tmax,1), limits = c(tmin,tmax)) + 
   scale_x_date(date_breaks = "2 month", date_labels = "%b", limits = as.Date(c("2020-01-01","2020-12-31"))) +

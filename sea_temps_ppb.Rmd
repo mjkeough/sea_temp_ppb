@@ -21,7 +21,7 @@ library(lubridate)
 library(readr)
 library(purrr)
 library(ggsci)
-library(giscoR)
+#library(giscoR)
 library(CopernicusMarine)
 library(CFtime)
 library(stars)
@@ -215,11 +215,9 @@ if(month(latest)>3 & month(latest)<9) {
 
 #### Multi-year plots
 
-The first figure shows the current year, other years from the past
-decade onwards in the background, and the second includes the data since
-2002. The third figure shows the current year against 10-year and
-post-2002 averages. The fourth shows temperature anomalies - how this
-year's temperature compares to the average since 2002.
+We can put this year into a broader perspective in a few ways. The first
+figure shows the current year, with other years from the past decade in
+the background, and the second includes the data since 2002.
 
 ```{r multipanel, include=FALSE}
 #Data goes from 2002 to present. Having 23 years' data is a bit spaghetti-like. Two options are to plot fewer years and/or emphasise the current year more. Do the first option by specifying a value for syear.
@@ -333,6 +331,10 @@ if(month(latest)>3 & month(latest)<9) {
 #p2c
 ```
 
+We can look at the current temperatures against the mean across many
+years, giving a clearer picture of seasonal patterns, but losing the
+year-to-year variation.
+
 ```{r vsmean}
 #Plot instead using averages for whole period or from syear onwards
 l10y <- bay |>
@@ -365,23 +367,45 @@ p2d <- ggplot(data = jawbone_all, aes(x = day_plot, y = sst, group = year_chr)) 
 p2d
 
 # Current year data with anomaly using l20y mean
+# Centred running mean; window shrinks at the ends; NA stays NA
+roll_mean <- function(x, k = 7) {
+  n <- length(x)
+  h <- k %/% 2
+  out <- vapply(seq_len(n), function(i) {
+    mean(x[max(1, i - h):min(n, i + h)], na.rm = TRUE)
+  }, numeric(1))
+  out[is.na(x)] <- NA_real_   # don't invent a value for days with no data
+  out
+}
+
+smooth_days <- 7   # try 5-10
+
 anomaly <- jawbone_all |>
   filter(year > pyear) |>
   left_join(distinct(l20y, day_plot, Mean20), by = "day_plot") |>
-  mutate(anomaly = sst - Mean20)
+  arrange(day_plot) |>
+  mutate(
+    anomaly   = sst - Mean20,
+    anom_roll = roll_mean(anomaly, smooth_days)
+  )
+```
 
-# Plot
-p2e <- ggplot(anomaly, aes(x = day_plot, y = anomaly)) +
+The last way is to look at the temperature anomaly - how current temperatures compare to past years. We do that by calculating the difference between current temperatures and the long-term (since 2003) average. In this case the day-to-day temperatures jump around a bit, so the anomaly is calculated using the average temperature for the past 7 days. Above-average temperatures are in red, below-average in blue. The daily anomaly is a faint line in the background.
+
+```{r}
+p2e <- ggplot(anomaly, aes(x = day_plot)) +
   geom_hline(yintercept = 0, colour = "grey50", linetype = "dashed") +
-  geom_line(colour = "blue", linewidth = 0.75, na.rm = TRUE) +
-  geom_ribbon(aes(ymin = pmin(anomaly, 0), ymax = 0), fill = "blue", alpha = 0.2, na.rm = TRUE) +
-  geom_ribbon(aes(ymin = 0, ymax = pmax(anomaly, 0)), fill = "red", alpha = 0.2, na.rm = TRUE) +
+  geom_line(aes(y = anomaly), colour = "blue", linewidth = 0.25, alpha = 0.4, na.rm = TRUE) +
+  geom_ribbon(aes(ymin = pmin(anom_roll, 0), ymax = 0), fill = "blue", alpha = 0.2, na.rm = TRUE) +
+  geom_ribbon(aes(ymin = 0, ymax = pmax(anom_roll, 0)), fill = "red", alpha = 0.2, na.rm = TRUE) +
+  geom_line(aes(y = anom_roll), colour = "blue", linewidth = 0.75, na.rm = TRUE) +
   scale_x_date(date_breaks = "1 month", date_labels = "%b") +
   labs(
     y        = "°C",
     x        = NULL,
     title    = "SST anomaly - current year",
-    subtitle = "Anomaly relative to long-term mean (blue = below, red = above)"
+    subtitle = paste0("Anomaly relative to long-term mean, ", smooth_days,
+                      "-day running mean (blue = below, red = above)")
   ) +
   theme_minimal()
 p2e

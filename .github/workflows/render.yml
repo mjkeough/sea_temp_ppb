@@ -36,14 +36,16 @@ jobs:
         run: |
           lib <- Sys.getenv("R_LIBS_USER")
           dir.create(lib, recursive = TRUE, showWarnings = FALSE)
-          options(repos = c(CRAN = "https://packagemanager.posit.co/cran/__linux__/noble/latest"))
-          install.packages(
-            c('knitr', 'rmarkdown',
-              'ggplot2', 'dplyr', 'tidyr', 'lubridate', 'readr', 'purrr',
-              'ggsci', 'giscoR', 'CopernicusMarine', 'CFtime', 'stars'),
-            lib = lib,
-            dependencies = c('Depends', 'Imports', 'LinkingTo')
-          )
+          options(repos = c(
+            pepijn = "https://pepijn-devries.r-universe.dev",
+            CRAN   = "https://packagemanager.posit.co/cran/__linux__/noble/latest"
+          ))
+          pkgs <- c('knitr', 'rmarkdown', 'ggplot2', 'dplyr', 'tidyr', 'lubridate',
+                    'readr', 'purrr', 'ggsci', 'CopernicusMarine', 'CFtime', 'stars', 'sf')
+          install.packages(pkgs, lib = lib,
+                           dependencies = c('Depends', 'Imports', 'LinkingTo'))
+          missing <- setdiff(pkgs, rownames(installed.packages(lib.loc = lib)))
+          if (length(missing)) stop("Failed to install: ", paste(missing, collapse = ", "))
 
       - name: Render R Markdown
         env:
